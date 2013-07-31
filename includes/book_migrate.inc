@@ -126,8 +126,14 @@ function islandora_migrate_book($book_pid, $page_pids, $new_collection_pid, $rep
     $new_page_object = $repository_50->constructObject('islandora');
     $new_page_object->label = $source_page_object->label;
     $fakepop = count($source_page_object);
-    $tiff = $source_page_object['TIFF']->content;
-    add_renamed_datastream($new_page_object, 'OBJ', $tiff, 'image/tif');
+    if ($source_page_object['TIFF']) {
+      $tiff = $source_page_object['TIFF']->content;
+      add_renamed_datastream($new_page_object, 'OBJ', $tiff, 'image/tif');
+    } else
+    {
+      add_renamed_datastream($new_page_object, 'JPG', $source_page_object['JPEG']->content, 'image/jpeg');
+    }
+    
     add_renamed_datastream($new_page_object, 'OCR', $source_page_object['OCR']->content, 'text/plain');
     add_renamed_datastream($new_page_object, 'DC', $source_page_object['DC']->content, 'text/xml');
     add_renamed_datastream($new_page_object, 'RELS-EXT', $source_page_object['RELS-EXT']->content, 'application/rdf+xml');
