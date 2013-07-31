@@ -29,11 +29,12 @@ function migrate_books_by_collection_form_submit(array $form, array &$form_state
   $repository_49 = migrate_books_create_repository($fedora_49_url);
   $repository_50 = migrate_books_create_repository($fedora_50_url);
   $collection_pid = $form_state['values']['collection_pid'];
-  // Build new collection on .50 to house migrated books.
-  $new_collection_pid = migrate_books_build_new_collection($repository_49, $repository_50, $collection_pid);
-  $book_pids = islandora_book_migrate_get_book_pids($collection_pid, $repository_49);
-  // Move to batch
+  // Get all subcollection pids
+  $subcollections = book_migrate_get_subcollections($repository_49, $collection_pid);
 
+  // Build new collection on .50 to house migrated books.
+  
+  $pairings = create_pairings($repository_49, $repository_50, $subcollections);
 
   $batch = array(
     'title' => t('Migrating Collections'),
@@ -41,8 +42,8 @@ function migrate_books_by_collection_form_submit(array $form, array &$form_state
     'file' => drupal_get_path('module', 'migrate_books') . '/includes/book_migrate.inc',
     'progress_message' => t('@current of @total objects created.'),
   );
-
-  foreach ($book_pids as $book_pid) {
+$batch['operations'][] = array('book_migrate_init');
+  foreach ($pairings as $book_pid => $new_collection_pid) {
     $page_pids = islandora_migrate_get_page_pids($book_pid, $repository_49);
     $batch['operations'][] = array('islandora_migrate_book', array(
         'book_pid' => $book_pid,
@@ -145,10 +146,8 @@ function islandora_migrate_book($book_pid, $page_pids, $new_collection_pid, $rep
     $new_page_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $new_book_pid);
     $new_page_object->relationships->remove(FEDORA_RELS_EXT_URI, 'isPageOf', NULL);
     $new_page_object->relationships->add(FEDORA_RELS_EXT_URI, 'isPageOf', $new_book_pid);
- 
+
     $new_object = islandora_add_object($new_page_object);
-    $new_pid = $new_object->id;
-    $pause = NULL;
   }
 }
 
@@ -181,4 +180,48 @@ function add_renamed_datastream($fedora_object, $dsid, $content, $mimetype) {
   $new_datastream->mimetype = $mimetype;
   $new_datastream->setContentFromString($content);
   $fedora_object->ingestDatastream($new_datastream);
+}
+
+function book_migrate_get_subcollections($repository, $collection_pid) {
+  $pids_to_process = array($collection_pid);
+  $pids_to_return = array($collection_pid);
+  while (count($pids_to_process) > 0) {
+    $current_pid = array_shift($pids_to_process);
+    $query = <<<QUERY
+select \$subject from <#ri> 
+    where (
+      (\$subject <info:fedora/fedora-system:def/relations-external#isMemberOfCollection> <info:fedora/$current_pid>
+       or
+       \$subject <info:fedora/fedora-system:def/relations-external#isMemberOf> <info:fedora/$current_pid>
+      )
+    and
+      (
+      \$subject <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:collectionCModel>
+      )
+    )
+QUERY;
+    
+    $collection_objects = $repository->ri->itqlQuery($query, 'unlimited');
+    foreach ($collection_objects as $collection_object) {
+      $pids_to_process[] = $collection_object['subject']['value'];
+      $pids_to_return[] = $collection_object['subject']['value'];
+    }
+  }
+  return $pids_to_return;
+}
+
+function create_pairings($repository_49, $repository_50, $existing_collections){
+  $pairings = array();
+  foreach ($existing_collections as $existing_collection){
+    $book_pids = islandora_book_migrate_get_book_pids($existing_collection, $repository_49);
+    $new_collection = migrate_books_build_new_collection($repository_49, $repository_50, $existing_collection);
+    foreach ($book_pids as $book_pid) {
+      $pairings[$book_pid] = $new_collection;
+    }
+  }
+  return $pairings;
+}
+
+function book_migrate_init(){
+  drupal_set_message('Starting');
 }
