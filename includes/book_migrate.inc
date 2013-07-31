@@ -129,6 +129,7 @@ function islandora_migrate_book($book_pid, $page_pids, $new_collection_pid, $rep
     if ($source_page_object['TIFF']) {
       $tiff = $source_page_object['TIFF']->content;
       add_renamed_datastream($new_page_object, 'OBJ', $tiff, 'image/tif');
+      islandora_paged_content_page_derive_image_datastreams($new_page_object);
     }
     else {
       add_renamed_datastream($new_page_object, 'JPG', $source_page_object['JPEG']->content, 'image/jpeg');
@@ -143,6 +144,7 @@ function islandora_migrate_book($book_pid, $page_pids, $new_collection_pid, $rep
     $new_page_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $new_book_pid);
     $new_page_object->relationships->remove(FEDORA_RELS_EXT_URI, 'isPageOf', NULL);
     $new_page_object->relationships->add(FEDORA_RELS_EXT_URI, 'isPageOf', $new_book_pid);
+ 
     $new_object = islandora_add_object($new_page_object);
     $new_pid = $new_object->id;
     $pause = NULL;
