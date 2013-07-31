@@ -104,6 +104,7 @@ QUERY;
 }
 
 function islandora_migrate_book($book_pid, $page_pids, $new_collection_pid, $repository_49, $repository_50) {
+  module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
   // create new book object.
   $source_book_object = $repository_49->getObject($book_pid);
   $new_book_object = $repository_50->constructObject('islandora');
