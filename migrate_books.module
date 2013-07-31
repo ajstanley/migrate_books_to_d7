@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * @file
+ *
+ * Hooks and callbacks for this module.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function migrate_books_menu() {
+  $items = array();
+  $items['islandora/migrate'] = array(  // @TODO: solution pack admin pages one nested deeper?
+    'title' => 'Migrate books from .49 to .50',
+    'description' => 'Single use migration - site specific.',
+    'page callback' => 'drupal_get_form',
+    'access arguments' => array('administer site configuration'),
+    'page arguments' => array('migrate_books_by_collection_form'),
+    'file' => 'includes/book_migrate.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+
