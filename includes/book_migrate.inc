@@ -33,7 +33,7 @@ function migrate_books_by_collection_form_submit(array $form, array &$form_state
   $subcollections = book_migrate_get_subcollections($repository_49, $collection_pid);
 
   // Build new collection on .50 to house migrated books.
-  
+
   $pairings = create_pairings($repository_49, $repository_50, $subcollections);
 
   $batch = array(
@@ -202,7 +202,7 @@ select \$subject from <#ri>
       )
     )
 QUERY;
-    
+
     $collection_objects = $repository->ri->itqlQuery($query, 'unlimited');
     foreach ($collection_objects as $collection_object) {
       $pids_to_process[] = $collection_object['subject']['value'];
@@ -212,15 +212,23 @@ QUERY;
   return $pids_to_return;
 }
 
-function create_pairings($repository_49, $repository_50, $existing_collections){
-  $pairings = array();
-  foreach ($existing_collections as $existing_collection){
-    $book_pids = islandora_book_migrate_get_book_pids($existing_collection['collection'], $repository_49);
-    $new_collection = migrate_books_build_new_collection($repository_49, $repository_50, $existing_collection);
+
+
+function create_pairings($repository_49, $repository_50, $source_pairings) {
+  $mappings[$source_pairings[0]['parent']] = $source_pairings[0]['parent'];
+  foreach ($source_pairings as $current) {
+    $current_collection = $current['collection'];
+    $current_parent = $current['parent'];
+    $args = array('collection' => $current_collection, 'parent' => $mappings[$current_parent]);
+    $new_collection = migrate_books_build_new_collection($repository_49, $repository_50, $args);
+    $mappings[$current_collection] = $new_collection;
+  }
+
+  foreach ($mappings as $source => $destination) {
+    $book_pids = islandora_book_migrate_get_book_pids($source, $repository_49);
     foreach ($book_pids as $book_pid) {
-      $pairings[$book_pid] = $new_collection;
+      $pairings[$book_pid] = $destination;
     }
   }
   return $pairings;
 }
-
