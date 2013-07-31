@@ -161,7 +161,7 @@ function migrate_books_create_repository($fedoraUrl) {
 }
 
 function migrate_books_build_new_collection($repository_49, $repository_50, $collection_info) {
-  $collections_pid = $collection_info['collection'];
+  $collection_pid = $collection_info['collection'];
   $parent_pid = $collection_info['parent'];
   $source_collection_object = $repository_49->getObject($collection_pid);
   $new_collection_object = $repository_50->constructObject('islandora');
