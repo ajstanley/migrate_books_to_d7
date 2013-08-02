@@ -38,9 +38,26 @@ function migrate_images_by_collection_form_submit(array $form, array &$form_stat
   $source = $form_state['values']['source'];
   $destination = $form_state['values']['destination'];
   $image_pids = migrate_books_get_image_pids($repository_49, $source);
+
+  $batch = array(
+    'title' => t('Migrating Images'),
+    'operations' => array(),
+    'file' => drupal_get_path('module', 'migrate_books') . '/includes/migrate_images.inc',
+    'progress_message' => t('@current of @total objects created.'),
+  );
+
   foreach ($image_pids as $image_pid) {
-    migrate_books_build_new_image($repository_49, $repository_50, $image_pid, $destination);
+
+    $batch['operations'][] = array('migrate_books_build_new_image', array(
+        'repository_49' => $repository_49,
+        'repository_50' => $repository_50,
+        'source_pid' => $image_pid,
+        '$destination_dir_pid' => $destination,
+    ));
   }
+
+  batch_set($batch);
+  batch_process();
 }
 
 function migrate_books_get_image_pids($repository_49, $source) {
