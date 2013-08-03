@@ -30,7 +30,7 @@ function migrate_books_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
     $items['islandora/migrate_ocr'] = array(
-    'title' => 'Migrate OCR from .49 Xritical Editions to .50 Books',
+    'title' => 'Migrate OCR from .49 Critical Editions to .50 Books',
     'description' => 'Single use migration - site specific.',
     'page callback' => 'drupal_get_form',
     'access arguments' => array('administer site configuration'),
