@@ -94,7 +94,7 @@ select \$subject from <#ri>
       (
       \$subject <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:pageCModel>
       )
-    and $subject <fedora-model:state> <fedora-model:Active>
+    and \$subject <fedora-model:state> <fedora-model:Active>
     )
 QUERY;
   $page_pids = array();
