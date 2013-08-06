@@ -43,7 +43,6 @@ function islandora_move_single_book($source_book, $destination_collection){
   $repository_49 = migrate_books_create_repository($fedora_49_url);
   $repository_50 = migrate_books_create_repository($fedora_50_url);;
   $source_pages = islandora_migrate_get_page_pids($source_book, $repository_49);
-  $destination_collection = 'islandora:16731';
   islandora_migrate_book($source_book, $source_pages, $destination_collection, $repository_49, $repository_50);
   return "Success";
 }

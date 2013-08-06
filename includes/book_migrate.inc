@@ -200,6 +200,7 @@ select \$subject from <#ri>
       (
       \$subject <info:fedora/fedora-system:def/model#hasModel> <info:fedora/islandora:collectionCModel>
       )
+    and \$subject <fedora-model:state> <fedora-model:Active>
     )
 QUERY;
 
