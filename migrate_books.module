@@ -29,13 +29,22 @@ function migrate_books_menu() {
     'file' => 'includes/migrate_images.inc',
     'type' => MENU_NORMAL_ITEM,
   );
-    $items['islandora/migrate_ocr'] = array(
+  $items['islandora/migrate_ocr'] = array(
     'title' => 'Migrate OCR from .49 Critical Editions to .50 Books',
     'description' => 'Single use migration - site specific.',
     'page callback' => 'drupal_get_form',
     'access arguments' => array('administer site configuration'),
     'page arguments' => array('migrate_ocr_by_collection_form'),
     'file' => 'includes/migrate_ocr.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['islandora/migrate_single_book'] = array(
+    'title' => 'Migrate OCR from .49 Critical Editions to .50 Books',
+    'description' => 'Single use migration - site specific.',
+    'page callback' => 'drupal_get_form',
+    'access arguments' => array('administer site configuration'),
+    'page arguments' => array('migrate_single_form'),
+    'file' => 'includes/migrate_single.inc',
     'type' => MENU_NORMAL_ITEM,
   );
 

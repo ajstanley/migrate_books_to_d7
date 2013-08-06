@@ -232,15 +232,3 @@ function create_pairings($repository_49, $repository_50, $source_pairings) {
   }
   return $pairings;
 }
-
-function righthand(){
-  $fedora_49_url = "http://modernistcommons.ca:8080/fedora";
-  $fedora_50_url = "http://137.149.200.50:8080/fedora";
-  $repository_49 = migrate_books_create_repository($fedora_49_url);
-  $repository_50 = migrate_books_create_repository($fedora_50_url);
-  $source_book = 'islandora:17969';
-  $source_pages = islandora_migrate_get_page_pids($source_book, $repository_49);
-  $new_collection_pid = 'islandora:16731';
-  islandora_migrate_book($source_book, $source_pages, $new_collection_pid, $repository_49, $repository_50);
-  return "Success";
-}
