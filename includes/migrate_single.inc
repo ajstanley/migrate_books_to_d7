@@ -9,7 +9,11 @@
 @include_once 'sites/all/libraries/tuque/RepositoryException.php';
 @include_once 'sites/all/libraries/tuque/Repository.php';
 @include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
-
+/*
+ * Migrates single book object from one repository to another
+ * Normally books are moved collection by collection
+ * This function is mostly for cleanup work
+ */
 function migrate_single_form(array $form, array &$form_state) {
   $form = array();
   $form['source'] = array(
@@ -36,7 +40,9 @@ function migrate_single_form_submit(array $form, array &$form_state) {
   islandora_move_single_book($source, $destination);
 
 }
-
+/*
+ * Migrates single book
+ */
 function islandora_move_single_book($source_book, $destination_collection){
   $fedora_49_url = "http://modernistcommons.ca:8080/fedora";
   $fedora_50_url = "http://137.149.200.50:8080/fedora";

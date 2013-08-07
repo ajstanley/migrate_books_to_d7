@@ -10,6 +10,11 @@
 @include_once 'sites/all/libraries/tuque/Repository.php';
 @include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
 
+/*
+ * Form to harvest cleaned up OCR from Critical Edition objects in D6
+ * then save it to the OCR stream of page objects in D7
+ */
+
 function migrate_ocr_by_collection_form(array $form, array &$form_state) {
   $form = array();
   $form['source'] = array(
@@ -19,7 +24,7 @@ function migrate_ocr_by_collection_form(array $form, array &$form_state) {
   );
   $form['destination'] = array(
     '#type' => 'textfield',
-    '#description' => "Enter d7 destinatin book object ",
+    '#description' => "Enter d7 destination book object ",
     '#default_value' => 'islandora:',
   );
   $form['submit'] = array(
@@ -65,6 +70,9 @@ function migrate_ocr_by_collection_form_submit(array $form, array &$form_state) 
   batch_process();
 }
 
+/*
+ * Get all page pids associated with a given book or critical edition object.
+ */
 function migrate_books_get_page_pids($repository, $source) {
   $query = <<<XML
   select \$object \$page from <#ri>
@@ -81,7 +89,10 @@ XML;
   }
   return $pids;
 }
-
+/*
+ * Takes CWRC data from source page, cleans it back to plain text and writes
+ * that text to the D7 OCR stream.
+ */
 function migrate_book_update_ocr($repository_49, $repository_50, $pairing) {
   $crited_page = $repository_49->getObject($pairing['source']);
   $destination_page = $repository_50->getObject($pairing['destination']);
@@ -89,4 +100,37 @@ function migrate_book_update_ocr($repository_49, $repository_50, $pairing) {
   $tei = $content->body;
   $cleaned_tei = strip_tags($tei->asXML());
   $destination_page['OCR']->content = $cleaned_tei;
+}
+
+/*
+ * Utility function to extract all critical editions associated with book 
+ * objects n a named collection.
+ */
+
+function bulk_info($collection_pid) {
+  module_load_include('inc', 'islandora_basic_collection', 'includes/utilities');
+  module_load_include('inc', 'migrate_books', 'includes/book_migrate');
+
+  $fedora_49_url = "http://modernistcommons.ca:8080/fedora";
+  $repository_49 = migrate_books_create_repository($fedora_49_url);
+  $book_object = $repository_49->getObject($collection_pid);
+  $book_pids = islandora_basic_collection_get_child_pids($book_object);
+  $output = array();
+  $tab_data = '';
+  foreach ($book_pids as $book) {
+    $crit_query = <<<STRING
+select \$subject \$title from <#ri>
+where (\$subject <http://islandora.ca/ontology/relsext#isCriticalEditionOf> '$book'
+and \$subject <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
+and \$subject <dc:title> \$title)
+STRING;
+
+    $critical_editions = $repository_49->ri->itqlQuery($crit_query, 'unlimited');
+    $output[$book] = $critical_editions;
+    if (!empty($critical_editions)) {
+      $tab_data .= $critical_editions[0]['subject']['value'] . " " . str_replace('Critical Edition of ', '', $critical_editions[0]['title']['value'] . "\n");
+    }
+  }
+
+  print $tab_data;
 }

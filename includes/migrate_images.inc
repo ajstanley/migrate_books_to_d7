@@ -9,7 +9,9 @@
 @include_once 'sites/all/libraries/tuque/RepositoryException.php';
 @include_once 'sites/all/libraries/tuque/Repository.php';
 @include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
-
+/*
+ * Form to allow migration of all images in D6 collection to named D7 collection
+ */
 function migrate_images_by_collection_form(array $form, array &$form_state) {
   $form = array();
   $form['source'] = array(
@@ -59,7 +61,9 @@ function migrate_images_by_collection_form_submit(array $form, array &$form_stat
   batch_set($batch);
   batch_process();
 }
-
+/*
+ * Returns PIDS of all image objects within an indentified directory.
+ */
 function migrate_books_get_image_pids($repository_49, $source) {
   $query = <<<QUERY
 select \$subject from <#ri> 
@@ -84,7 +88,9 @@ QUERY;
   }
   return $image_pids;
 }
-
+/*
+ * Clones image object from D6 to D7
+ */
 function migrate_books_build_new_image($repository_49, $repository_50, $source_pid, $destination_dir_pid) {
 
   $source_image_object = $repository_49->getObject($source_pid);
