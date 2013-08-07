@@ -9,7 +9,7 @@
 /**
  * Implements hook_menu().
  */
-function migrate_books_menu() {
+function islandora_migrate_menu() {
   $items = array();
   $items['islandora/migrate'] = array(
     'title' => 'Migrate books from .49 to .50',
@@ -17,7 +17,7 @@ function migrate_books_menu() {
     'page callback' => 'drupal_get_form',
     'access arguments' => array('administer site configuration'),
     'page arguments' => array('migrate_books_by_collection_form'),
-    'file' => 'includes/book_migrate.inc',
+    'file' => 'includes/islandora_migrate.inc',
     'type' => MENU_NORMAL_ITEM,
   );
   $items['islandora/migrate_images'] = array(
@@ -47,6 +47,15 @@ function migrate_books_menu() {
     'file' => 'includes/migrate_single.inc',
     'type' => MENU_NORMAL_ITEM,
   );
+    $items['admin/islandora/porcus']   = array(
+      'title' => 'Migration Module',
+      'description' => 'Migrate Objects from one Fedora to another.',
+      'page callback' => 'drupal_get_form',
+      'access arguments' => array('administer site configuration'),
+      'page arguments' => array('islandora_migrate_admin'),
+      'file' => 'includes/islandora_migrate.admin.inc',
+      'type' => MENU_NORMAL_ITEM,
+    );
 
   return $items;
 }

@@ -1,6 +1,0 @@
-name = "Islandora Book Migration"
-description = "Migrate books from .49 to .50."
-package = Islandora
-dependencies[] = islandora
-version = 7.x-dev
-core = 7.x

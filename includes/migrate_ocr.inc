@@ -36,15 +36,13 @@ function migrate_ocr_by_collection_form(array $form, array &$form_state) {
 
 function migrate_ocr_by_collection_form_submit(array $form, array &$form_state) {
   module_load_include('inc', 'migrate_books', 'includes/book_migrate');
-  $fedora_49_url = "http://modernistcommons.ca:8080/fedora";
-  $fedora_50_url = "http://137.149.200.50:8080/fedora";
-  $repository_49 = migrate_books_create_repository($fedora_49_url);
-  $repository_50 = migrate_books_create_repository($fedora_50_url);
+  $source_repository = migrate_books_create_source_repository();
+  $destination_repository = migrate_books_create_destination_repository();
   $source = $form_state['values']['source'];
   $destination = $form_state['values']['destination'];
 
-  $crited_page_pids = migrate_books_get_page_pids($repository_49, $source);
-  $book_page_pids = migrate_books_get_page_pids($repository_50, $destination);
+  $crited_page_pids = migrate_books_get_page_pids($source_repository, $source);
+  $book_page_pids = migrate_books_get_page_pids($destination_repository, $destination);
   $pairings = array();
   for ($count = 0; $count < count($crited_page_pids); $count++) {
     $pairings[] = array('source' => $crited_page_pids[$count], 'destination' => $book_page_pids[$count]);
@@ -60,8 +58,8 @@ function migrate_ocr_by_collection_form_submit(array $form, array &$form_state) 
   foreach ($pairings as $pairing) {
 
     $batch['operations'][] = array('migrate_book_update_ocr', array(
-        'repository_49' => $repository_49,
-        'repository_50' => $repository_50,
+        'repository_49' => $source_repository,
+        'repository_50' => $destination_repository,
         'pairing' => $pairing,
     ));
   }
@@ -93,9 +91,9 @@ XML;
  * Takes CWRC data from source page, cleans it back to plain text and writes
  * that text to the D7 OCR stream.
  */
-function migrate_book_update_ocr($repository_49, $repository_50, $pairing) {
-  $crited_page = $repository_49->getObject($pairing['source']);
-  $destination_page = $repository_50->getObject($pairing['destination']);
+function migrate_book_update_ocr($source_repository, $destination_repository, $pairing) {
+  $crited_page = $source_repository->getObject($pairing['source']);
+  $destination_page = $destination_repository->getObject($pairing['destination']);
   $content = new SimpleXMLElement($crited_page['CWRC']->content);
   $tei = $content->body;
   $cleaned_tei = strip_tags($tei->asXML());
@@ -112,8 +110,8 @@ function bulk_info($collection_pid) {
   module_load_include('inc', 'migrate_books', 'includes/book_migrate');
 
   $fedora_49_url = "http://modernistcommons.ca:8080/fedora";
-  $repository_49 = migrate_books_create_repository($fedora_49_url);
-  $book_object = $repository_49->getObject($collection_pid);
+  $source_repository = migrate_books_create_repository($fedora_49_url);
+  $book_object = $source_repository->getObject($collection_pid);
   $book_pids = islandora_basic_collection_get_child_pids($book_object);
   $output = array();
   $tab_data = '';
@@ -125,7 +123,7 @@ and \$subject <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-sy
 and \$subject <dc:title> \$title)
 STRING;
 
-    $critical_editions = $repository_49->ri->itqlQuery($crit_query, 'unlimited');
+    $critical_editions = $source_repository->ri->itqlQuery($crit_query, 'unlimited');
     $output[$book] = $critical_editions;
     if (!empty($critical_editions)) {
       $tab_data .= $critical_editions[0]['subject']['value'] . " " . str_replace('Critical Edition of ', '', $critical_editions[0]['title']['value'] . "\n");

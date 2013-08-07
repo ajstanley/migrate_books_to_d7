@@ -13,11 +13,16 @@
  * Detects and recreates full directory structure to move directory
  * contents from D6 to D7 instance.
  */
+
 function migrate_books_by_collection_form(array $form, array &$form_state) {
   $form = array();
   $form['collection_pid'] = array(
     '#type' => 'textfield',
-    '#description' => "Enter pid of collection to be migrated"
+    '#description' => "Enter pid of collection to be migrated."
+  );
+  $form['destination_pid'] = array(
+    '#type' => 'textfield',
+    '#description' => "Enter pid of destination collection."
   );
   $form['submit'] = array(
     '#type' => 'submit',
@@ -27,33 +32,33 @@ function migrate_books_by_collection_form(array $form, array &$form_state) {
 }
 
 function migrate_books_by_collection_form_submit(array $form, array &$form_state) {
-  $fedora_49_url = "http://modernistcommons.ca:8080/fedora";
-  $fedora_50_url = "http://137.149.200.50:8080/fedora";
-  $repository_49 = migrate_books_create_repository($fedora_49_url);
-  $repository_50 = migrate_books_create_repository($fedora_50_url);
+
+  $source_repository = migrate_books_create_source_repository();
+  $destination_repository = migrate_books_create_destination_repository();
   $collection_pid = $form_state['values']['collection_pid'];
+  $destination_pid = $form_state['values']['destination_pid'];
   // Get all subcollection pids
-  $subcollections = book_migrate_get_subcollections($repository_49, $collection_pid);
+  $subcollections = islandora_migrate_get_subcollections($source_repository, $collection_pid, $destination_pid);
 
-  // Build new collection on .50 to house migrated books.
+  // Build new collection on destination to house migrated objects.
 
-  $pairings = create_pairings($repository_49, $repository_50, $subcollections);
+  $pairings = create_pairings($source_repository, $destination_repository, $subcollections);
 
   $batch = array(
     'title' => t('Migrating Collections'),
     'operations' => array(),
-    'file' => drupal_get_path('module', 'migrate_books') . '/includes/book_migrate.inc',
+    'file' => drupal_get_path('module', 'islandora_migrate') . '/includes/islandora_migrate.inc',
     'progress_message' => t('@current of @total objects created.'),
   );
 
   foreach ($pairings as $book_pid => $new_collection_pid) {
-    $page_pids = islandora_migrate_get_page_pids($book_pid, $repository_49);
+    $page_pids = islandora_migrate_get_page_pids($book_pid, $source_repository);
     $batch['operations'][] = array('islandora_migrate_book', array(
         'book_pid' => $book_pid,
         'page_pids' => $page_pids,
         'new_collection_pid' => $new_collection_pid,
-        'repository_49' => $repository_49,
-        'repository_50' => $repository_50,
+        'source_repository' => $source_repository,
+        'destination_repository' => $destination_repository,
     ));
   }
 
@@ -64,7 +69,8 @@ function migrate_books_by_collection_form_submit(array $form, array &$form_state
 /*
  * Get all book objects associated with collection object.
  */
-function islandora_book_migrate_get_book_pids($collection_pid, $repository) {
+
+function islandora_islandora_migrate_get_book_pids($collection_pid, $repository) {
   $query = <<<QUERY
 select \$subject from <#ri> 
     where (
@@ -87,9 +93,11 @@ QUERY;
   }
   return $book_pids;
 }
+
 /*
  * Get all page objects assoicted with book or Critical Edition object
  */
+
 function islandora_migrate_get_page_pids($book_pid, $repository) {
   $query = <<<QUERY
 select \$subject from <#ri> 
@@ -112,14 +120,16 @@ QUERY;
   }
   return $page_pids;
 }
+
 /*
  * Function which creates new book and page objects on D7, using inputs from D6
  */
-function islandora_migrate_book($book_pid, $page_pids, $new_collection_pid, $repository_49, $repository_50) {
+
+function islandora_migrate_book($book_pid, $page_pids, $new_collection_pid, $source_repository, $destination_repository) {
   module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
   // create new book object.
-  $source_book_object = $repository_49->getObject($book_pid);
-  $new_book_object = $repository_50->constructObject('islandora');
+  $source_book_object = $source_repository->getObject($book_pid);
+  $new_book_object = $destination_repository->constructObject('islandora');
   $new_book_object->label = $source_book_object->label;
   foreach ($source_book_object as $dsid => $content) {
     if ($dsid != 'PDF') {
@@ -135,8 +145,8 @@ function islandora_migrate_book($book_pid, $page_pids, $new_collection_pid, $rep
   $new_book_pid = $ingested_object->id;
 
   foreach ($page_pids as $page_pid) {
-    $source_page_object = $repository_49->getObject($page_pid);
-    $new_page_object = $repository_50->constructObject('islandora');
+    $source_page_object = $source_repository->getObject($page_pid);
+    $new_page_object = $destination_repository->constructObject('islandora');
     $new_page_object->label = $source_page_object->label;
     $fakepop = count($source_page_object);
     if ($source_page_object['TIFF']) {
@@ -161,25 +171,41 @@ function islandora_migrate_book($book_pid, $page_pids, $new_collection_pid, $rep
     $new_object = islandora_add_object($new_page_object);
   }
 }
+
+function migrate_books_create_source_repository() {
+  $source_url = variable_get('islandora_migrate_source_url', '');
+  $source_user = variable_get('islandora_migrate_source_user', '');
+  $source_password = variable_get('islandora_migrate_source_password', '');
+  return migrate_books_create_repository($source_url, $source_user, $source_password);
+}
+
+function migrate_books_create_destination_repository() {
+  $destination_url = variable_get('islandora_migrate_destination_url', '');
+  $destination_user = variable_get('islandora_migrate_destination_user', '');
+  $destination_password = variable_get('islandora_migrate_destination_password', '');
+  return migrate_books_create_repository($destination_url, $destination_user, $destination_password);
+}
+
 /*
  * Creates Tuque objects.
  */
-function migrate_books_create_repository($fedoraUrl) {
-  $username = "fedoraAdmin";
-  $password = "anotherFed0r@@dmin";
+
+function migrate_books_create_repository($fedoraUrl, $username, $password) {
   $connection = new RepositoryConnection($fedoraUrl, $username, $password);
   $connection->reuseConnection = TRUE;
   $repository = new FedoraRepository(new FedoraApi($connection), new SimpleCache());
   return $repository;
 }
+
 /*
  * Builds new collection on D7.
  */
-function migrate_books_build_new_collection($repository_49, $repository_50, $collection_info) {
+
+function migrate_books_build_new_collection($source_repository, $destination_repository, $collection_info) {
   $collection_pid = $collection_info['collection'];
   $parent_pid = $collection_info['parent'];
-  $source_collection_object = $repository_49->getObject($collection_pid);
-  $new_collection_object = $repository_50->constructObject('islandora');
+  $source_collection_object = $source_repository->getObject($collection_pid);
+  $new_collection_object = $destination_repository->constructObject('islandora');
   $new_collection_object->label = $source_collection_object->label;
   foreach ($source_collection_object as $dsid => $content) {
     $new_collection_object->ingestDatastream($content);
@@ -190,9 +216,11 @@ function migrate_books_build_new_collection($repository_49, $repository_50, $col
   $ingested_object = islandora_add_object($new_collection_object);
   return $ingested_object->id;
 }
+
 /*
  * Adds individual datastream to uningested object.
  */
+
 function add_renamed_datastream($fedora_object, $dsid, $content, $mimetype) {
   $new_datastream = $fedora_object->constructDatastream($dsid);
   $new_datastream->label = $dsid;
@@ -200,12 +228,14 @@ function add_renamed_datastream($fedora_object, $dsid, $content, $mimetype) {
   $new_datastream->setContentFromString($content);
   $fedora_object->ingestDatastream($new_datastream);
 }
+
 /*
  * Recursively gets all subcollections of given collection
  */
-function book_migrate_get_subcollections($repository, $collection_pid) {
+
+function islandora_migrate_get_subcollections($repository, $collection_pid, $destination_pid) {
   $pids_to_process = array($collection_pid);
-  $pids_to_return[] = array('parent' => 'islandora:9406', 'collection' => $collection_pid);
+  $pids_to_return[] = array('parent' => $destination_pid, 'collection' => $collection_pid);
   while (count($pids_to_process) > 0) {
     $current_pid = array_shift($pids_to_process);
     $query = <<<QUERY
@@ -233,22 +263,22 @@ QUERY;
 }
 
 /*
- * Maps new colelction PIDS back to source collection pids to allow a meanigful
+ * Maps new collection PIDS back to source collection pids to allow a meaningful
  * directory structure to be created.
  */
 
-function create_pairings($repository_49, $repository_50, $source_pairings) {
+function create_pairings($source_repository, $destination_repository, $source_pairings) {
   $mappings[$source_pairings[0]['parent']] = $source_pairings[0]['parent'];
   foreach ($source_pairings as $current) {
     $current_collection = $current['collection'];
     $current_parent = $current['parent'];
     $args = array('collection' => $current_collection, 'parent' => $mappings[$current_parent]);
-    $new_collection = migrate_books_build_new_collection($repository_49, $repository_50, $args);
+    $new_collection = migrate_books_build_new_collection($source_repository, $destination_repository, $args);
     $mappings[$current_collection] = $new_collection;
   }
 
   foreach ($mappings as $source => $destination) {
-    $book_pids = islandora_book_migrate_get_book_pids($source, $repository_49);
+    $book_pids = islandora_islandora_migrate_get_book_pids($source, $source_repository);
     foreach ($book_pids as $book_pid) {
       $pairings[$book_pid] = $destination;
     }

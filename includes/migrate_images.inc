@@ -33,13 +33,11 @@ function migrate_images_by_collection_form(array $form, array &$form_state) {
 
 function migrate_images_by_collection_form_submit(array $form, array &$form_state) {
   module_load_include('inc', 'migrate_books', 'includes/book_migrate');
-  $fedora_49_url = "http://modernistcommons.ca:8080/fedora";
-  $fedora_50_url = "http://137.149.200.50:8080/fedora";
-  $repository_49 = migrate_books_create_repository($fedora_49_url);
-  $repository_50 = migrate_books_create_repository($fedora_50_url);
+  $source_repository = migrate_books_create_source_repository();
+  $destination_repository = migrate_books_create_destination_repository();
   $source = $form_state['values']['source'];
   $destination = $form_state['values']['destination'];
-  $image_pids = migrate_books_get_image_pids($repository_49, $source);
+  $image_pids = migrate_books_get_image_pids($source_repository, $source);
 
   $batch = array(
     'title' => t('Migrating Images'),
@@ -51,8 +49,8 @@ function migrate_images_by_collection_form_submit(array $form, array &$form_stat
   foreach ($image_pids as $image_pid) {
 
     $batch['operations'][] = array('migrate_books_build_new_image', array(
-        'repository_49' => $repository_49,
-        'repository_50' => $repository_50,
+        'repository_49' => $source_repository,
+        'repository_50' => $destination_repository,
         'source_pid' => $image_pid,
         '$destination_dir_pid' => $destination,
     ));
@@ -64,7 +62,7 @@ function migrate_images_by_collection_form_submit(array $form, array &$form_stat
 /*
  * Returns PIDS of all image objects within an indentified directory.
  */
-function migrate_books_get_image_pids($repository_49, $source) {
+function migrate_books_get_image_pids($source_repository, $source) {
   $query = <<<QUERY
 select \$subject from <#ri> 
     where (
@@ -82,7 +80,7 @@ select \$subject from <#ri>
 QUERY;
 
   $image_pids = array();
-  $image_objects = $repository_49->ri->itqlQuery($query, 'unlimited');
+  $image_objects = $source_repository->ri->itqlQuery($query, 'unlimited');
   foreach ($image_objects as $image_object) {
     $image_pids[] = $image_object['subject']['value'];
   }
@@ -91,10 +89,10 @@ QUERY;
 /*
  * Clones image object from D6 to D7
  */
-function migrate_books_build_new_image($repository_49, $repository_50, $source_pid, $destination_dir_pid) {
+function migrate_books_build_new_image($source_repository, $destination_repository, $source_pid, $destination_dir_pid) {
 
-  $source_image_object = $repository_49->getObject($source_pid);
-  $new_image_object = $repository_50->constructObject('islandora');
+  $source_image_object = $source_repository->getObject($source_pid);
+  $new_image_object = $destination_repository->constructObject('islandora');
   $new_image_object->label = $source_image_object->label;
   foreach ($source_image_object as $dsid => $content) {
     $new_image_object->ingestDatastream($content);
