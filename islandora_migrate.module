@@ -6,6 +6,8 @@
  * Hooks and callbacks for this module.
  */
 
+define('ISLANDORA_MIGRATE', 'migrate objects between fedora repositories');
+
 /**
  * Implements hook_menu().
  */
@@ -47,7 +49,7 @@ function islandora_migrate_menu() {
     'file' => 'includes/migrate_single.inc',
     'type' => MENU_NORMAL_ITEM,
   );
-    $items['admin/islandora/porcus']   = array(
+    $items['admin/islandora/migrate']   = array(
       'title' => 'Migration Module',
       'description' => 'Migrate Objects from one Fedora to another.',
       'page callback' => 'drupal_get_form',
@@ -60,3 +62,14 @@ function islandora_migrate_menu() {
   return $items;
 }
 
+/**
+ * Implements hook_permission().
+ */
+function islandora_migrate_permission() {
+  return array(
+    ISLANDORA_MIGRATE => array(
+      'title' => t(ISLANDORA_MIGRATE),
+      'description' => t('Non-detructively migrate objects from one Fedora to another.'),
+    ),
+  );
+}

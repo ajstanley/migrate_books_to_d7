@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @file
+ * Logic to move all images in a collection.
+ */
+
 @include_once 'sites/all/libraries/tuque/Datastream.php';
 @include_once 'sites/all/libraries/tuque/FedoraApi.php';
 @include_once 'sites/all/libraries/tuque/FedoraApiSerializer.php';
@@ -9,8 +14,17 @@
 @include_once 'sites/all/libraries/tuque/RepositoryException.php';
 @include_once 'sites/all/libraries/tuque/Repository.php';
 @include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
-/*
- * Form to allow migration of all images in D6 collection to named D7 collection
+
+/**
+ * Migrates all images to new collection.
+ *
+ * @param array $form
+ *   form
+ * @param array $form_state
+ *   form_state
+ *
+ * @return array
+ *   drupal form definition
  */
 function migrate_images_by_collection_form(array $form, array &$form_state) {
   $form = array();
@@ -31,6 +45,15 @@ function migrate_images_by_collection_form(array $form, array &$form_state) {
   return $form;
 }
 
+/**
+ * Submit handler for the form.
+ *
+ * @param array $form
+ *   The form.
+ *
+ * @param array $form_state
+ *   The form state.
+ */
 function migrate_images_by_collection_form_submit(array $form, array &$form_state) {
   module_load_include('inc', 'migrate_books', 'includes/book_migrate');
   $source_repository = migrate_books_create_source_repository();
@@ -53,14 +76,23 @@ function migrate_images_by_collection_form_submit(array $form, array &$form_stat
         'repository_50' => $destination_repository,
         'source_pid' => $image_pid,
         '$destination_dir_pid' => $destination,
-    ));
+      ));
   }
 
   batch_set($batch);
   batch_process();
 }
-/*
- * Returns PIDS of all image objects within an indentified directory.
+
+/**
+ * Returns PIDS of all image objects within an identified directory.
+ *
+ * @param Repository $source_repository
+ *   Repository object
+ * @param string $source
+ *   PID of source directory
+ *
+ * @return array
+ *   array of image pids
  */
 function migrate_books_get_image_pids($source_repository, $source) {
   $query = <<<QUERY
@@ -88,6 +120,21 @@ QUERY;
 }
 /*
  * Clones image object from D6 to D7
+ */
+/**
+ * Clones image objects.
+ *
+ * @param Repository $source_repository
+ *   Repository object
+ * @param Repository $destination_repository
+ *   Repository object
+ * @param string $source_pid
+ *   PID of source object
+ * @param string $destination_dir_pid
+ *   PID of destination directory
+ *
+ * @return string
+ *   PID of newly created object
  */
 function migrate_books_build_new_image($source_repository, $destination_repository, $source_pid, $destination_dir_pid) {
 

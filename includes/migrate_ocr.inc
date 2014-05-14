@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @file
+ * Logic to harvest cleaned up OCR from Critical Edition.
+ */
+
 @include_once 'sites/all/libraries/tuque/Datastream.php';
 @include_once 'sites/all/libraries/tuque/FedoraApi.php';
 @include_once 'sites/all/libraries/tuque/FedoraApiSerializer.php';
@@ -10,11 +15,17 @@
 @include_once 'sites/all/libraries/tuque/Repository.php';
 @include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
 
-/*
- * Form to harvest cleaned up OCR from Critical Edition objects in D6
- * then save it to the OCR stream of page objects in D7
+/**
+ * Form to harvest cleaned up OCR from Critical Edition objects in D6.
+ *
+ * @param array $form
+ *   form
+ * @param array $form_state
+ *   form_state
+ *
+ * @return array
+ *   drupal form definition
  */
-
 function migrate_ocr_by_collection_form(array $form, array &$form_state) {
   $form = array();
   $form['source'] = array(
@@ -34,6 +45,15 @@ function migrate_ocr_by_collection_form(array $form, array &$form_state) {
   return $form;
 }
 
+/**
+ * Submit handler for the form.
+ *
+ * @param array $form
+ *   The form.
+ *
+ * @param array $form_state
+ *   The form state.
+ */
 function migrate_ocr_by_collection_form_submit(array $form, array &$form_state) {
   module_load_include('inc', 'migrate_books', 'includes/book_migrate');
   $source_repository = migrate_books_create_source_repository();
@@ -61,15 +81,23 @@ function migrate_ocr_by_collection_form_submit(array $form, array &$form_state) 
         'repository_49' => $source_repository,
         'repository_50' => $destination_repository,
         'pairing' => $pairing,
-    ));
+      ));
   }
 
   batch_set($batch);
   batch_process();
 }
 
-/*
+/**
  * Get all page pids associated with a given book or critical edition object.
+ *
+ * @param Repository $repository
+ *   Tuque repository object
+ * @param string $source
+ *   PID of book object
+ *
+ * @return array
+ *   Array of page pids
  */
 function migrate_books_get_page_pids($repository, $source) {
   $query = <<<XML
@@ -87,9 +115,17 @@ XML;
   }
   return $pids;
 }
-/*
- * Takes CWRC data from source page, cleans it back to plain text and writes
- * that text to the D7 OCR stream.
+
+
+/**
+ * Takes CWRC data from source page, cleans it, and writes it new repository.
+ *
+ * @param Repository $source_repository
+ *   Tuque repository object
+ * @param Repository $destination_repository
+ *   Tuque repository object
+ * @param array $pairing
+ *   Array with 'source' and 'destination' keys
  */
 function migrate_book_update_ocr($source_repository, $destination_repository, $pairing) {
   $crited_page = $source_repository->getObject($pairing['source']);
@@ -100,11 +136,13 @@ function migrate_book_update_ocr($source_repository, $destination_repository, $p
   $destination_page['OCR']->content = $cleaned_tei;
 }
 
-/*
- * Utility function to extract all critical editions associated with book 
- * objects n a named collection.
- */
 
+/**
+ * Extracts all critical editions associated with book objects in collection.
+ *
+ * @param string $collection_pid
+ *   PID of collection object
+ */
 function bulk_info($collection_pid) {
   module_load_include('inc', 'islandora_basic_collection', 'includes/utilities');
   module_load_include('inc', 'migrate_books', 'includes/book_migrate');
